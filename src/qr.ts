@@ -227,14 +227,19 @@ export function generateQR(text: string, scale: number = 4): Uint8Array {
   // Dark module
   setFunc(8, size - 8, true);
 
-  // Reserve format areas
-  for (let i = 0; i < 9; i++) {
-    if (i < size) { setFunc(i, 8, false); setFunc(8, i, false); }
-    if (i < 8) setFunc(8, size - 1 - i, false);
-    if (i < 7) setFunc(size - 1 - i, 8, false);
+  // Reserve format info areas (specific cells only, not entire rows/cols)
+  for (let i = 0; i < 8; i++) {
+    setFunc(i, 8, false);  // vertical format info left side
+    setFunc(8, i, false);  // horizontal format info top side
+  }
+  for (let i = 0; i < 7; i++) {
+    setFunc(8, size - 1 - i, false);  // horizontal format info right side
+  }
+  for (let i = 0; i < 6; i++) {
+    setFunc(size - 1 - i, 8, false);  // vertical format info bottom side
   }
 
-  // Reserve version info areas
+  // Version info areas (v7+): 3×6 rectangles only
   if (version >= 7) {
     for (let i = 0; i < 6; i++) {
       for (let j = 0; j < 3; j++) {
