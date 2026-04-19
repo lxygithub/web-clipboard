@@ -358,59 +358,77 @@ function evaluatePenalty(mods: boolean[][], size: number): number {
   return pen;
 }
 
-// Minimal PNG encoder
+// Minimal PNG encoder - uses zlib stored (uncompressed) blocks
 function renderPNG(modules: boolean[][], size: number, scale: number): Uint8Array {
   const imgSize = size * scale;
-  const rowBytes = imgSize + 1; // filter byte + pixels
+  const rowBytes = imgSize + 1;
   const rawData = new Uint8Array(imgSize * rowBytes);
 
   for (let y = 0; y < imgSize; y++) {
-    rawData[y * rowBytes] = 0; // filter none
+    rawData[y * rowBytes] = 0; // filter: none
     for (let x = 0; x < imgSize; x++) {
-      const dark = modules[~~(y / scale)][~~(x / scale)];
-      rawData[y * rowBytes + 1 + x] = dark ? 0 : 255;
+      rawData[y * rowBytes + 1 + x] = modules[~~(y / scale)][~~(x / scale)] ? 0 : 255;
     }
   }
 
-  // Compress with zlib
-  const compressed = deflate(rawData);
+  // Build IDAT with zlib stored blocks
+  const maxStored = 65535;
+  const zlibSize = 2 + rawData.length + Math.ceil(rawData.length / maxStored) * 5 + 4;
+  const idatData = new Uint8Array(zlibSize);
+  idatData[0] = 0x78; // CMF: deflate method, 32K window
+  idatData[1] = 0x01; // FLG: FCHECK that makes (0x7801 % 31 == 0)
 
-  // Build PNG
-  const ihdr = new Uint8Array(13);
-  new DataView(ihdr.buffer).setUint32(0, imgSize); // width
-  new DataView(ihdr.buffer).setUint32(4, imgSize); // height
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 0; // grayscale
-  ihdr[10] = 0; // compression
-  ihdr[11] = 0; // filter
-  ihdr[12] = 0; // interlace
+  let off = 2;
+  for (let i = 0; i < rawData.length; i += maxStored) {
+    const blockLen = Math.min(maxStored, rawData.length - i);
+    const isLast = i + blockLen >= rawData.length;
+    idatData[off++] = isLast ? 1 : 0; // BFINAL=1 if last, BTYPE=00 (stored)
+    const dv = new DataView(idatData.buffer, off);
+    dv.setUint16(0, blockLen, true); // LEN
+    dv.setUint16(2, (~blockLen) & 0xFFFF, true); // NLEN
+    off += 4;
+    idatData.set(rawData.subarray(i, i + blockLen), off);
+    off += blockLen;
+  }
 
-  const chunks: Uint8Array[] = [];
+  // Adler-32
+  let s1 = 1, s2 = 0;
+  for (let i = 0; i < rawData.length; i++) {
+    s1 = (s1 + rawData[i]) % 65521;
+    s2 = (s2 + s1) % 65521;
+  }
+  idatData[off] = (s2 >> 8) & 0xff;
+  idatData[off + 1] = s2 & 0xff;
+  idatData[off + 2] = (s1 >> 8) & 0xff;
+  idatData[off + 3] = s1 & 0xff;
 
-  function makeChunk(type: string, data: Uint8Array) {
-    const typeBytes = new TextEncoder().encode(type);
+  // Build PNG chunks
+  const parts: number[][] = [];
+
+  function addChunk(type: string, data: Uint8Array) {
+    const enc = new TextEncoder();
+    const typeBytes = enc.encode(type);
     const chunk = new Uint8Array(4 + typeBytes.length + data.length + 4);
     const dv = new DataView(chunk.buffer);
     dv.setUint32(0, data.length);
     chunk.set(typeBytes, 4);
     chunk.set(data, 4 + typeBytes.length);
-    // CRC
-    const crcVal = crc32(chunk.subarray(4, 4 + typeBytes.length + data.length));
-    dv.setUint32(4 + typeBytes.length + data.length, crcVal);
-    chunks.push(chunk);
+    dv.setUint32(4 + typeBytes.length + data.length, crc32(chunk.subarray(4, 4 + typeBytes.length + data.length)));
+    parts.push(Array.from(chunk));
   }
 
-  const signature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
-  makeChunk("IHDR", ihdr);
-  makeChunk("IDAT", compressed);
-  makeChunk("IEND", new Uint8Array(0));
+  // IHDR
+  const ihdr = new Uint8Array(13);
+  new DataView(ihdr.buffer).setUint32(0, imgSize);
+  new DataView(ihdr.buffer).setUint32(4, imgSize);
+  ihdr[8] = 8; ihdr[9] = 0; // bit depth 8, grayscale
+  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  addChunk("IHDR", ihdr);
+  addChunk("IDAT", idatData.subarray(0, off + 4));
+  addChunk("IEND", new Uint8Array(0));
 
-  const totalLen = signature.length + chunks.reduce((s, c) => s + c.length, 0);
-  const png = new Uint8Array(totalLen);
-  let offset = 0;
-  png.set(signature, offset); offset += signature.length;
-  for (const chunk of chunks) { png.set(chunk, offset); offset += chunk.length; }
-  return png;
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  return new Uint8Array([...sig, ...parts.flat()]);
 }
 
 function crc32(data: Uint8Array): number {
@@ -432,72 +450,4 @@ function getCrcTable(): Uint32Array {
     crcTable[i] = c >>> 0;
   }
   return crcTable;
-}
-
-// Simple DEFLATE (uncompressed blocks - stored method)
-function deflate(data: Uint8Array): Uint8Array {
-  // Header: CMF (0x78 = deflate, window=32K) + FLG (0x01 = no compression)
-  // Actually for no compression: CMF=0x78, FLG should make CMF*256+FLG % 31 = 0
-  // 0x78 = 120, 120*256 = 30720, 30720 % 31 = 18, need FLG = 13 (18+13=31)
-  // But let's use actual deflate with fixed Huffman for better compression
-  return deflateFixed(data);
-}
-
-function deflateFixed(data: Uint8Array): Uint8Array {
-  const out: number[] = [];
-  let bits = 0;
-  let bitCount = 0;
-
-  function writeBits(val: number, len: number) {
-    bits |= val << bitCount;
-    bitCount += len;
-    while (bitCount >= 8) {
-      out.push(bits & 0xff);
-      bits >>= 8;
-      bitCount -= 8;
-    }
-  }
-
-  // Fixed Huffman tables for deflate
-  // Literal/length codes: 0-143: 8 bits, 144-255: 9 bits, 256-279: 7 bits, 280-287: 8 bits
-  function getFixedLitCode(lit: number): [number, number] {
-    if (lit <= 143) return [lit + 48, 8];
-    if (lit <= 255) return [lit + 400 - 256, 9];
-    if (lit <= 279) return [lit - 256 + 0, 7];
-    return [lit - 280 + 192, 8];
-  }
-
-  // Block header: BFINAL=1, BTYPE=01 (fixed)
-  writeBits(1, 1); // BFINAL
-  writeBits(1, 2); // BTYPE = 01 (fixed Huffman)
-
-  // Encode each byte as a literal
-  for (let i = 0; i < data.length; i++) {
-    const [code, len] = getFixedLitCode(data[i]);
-    writeBits(code, len);
-  }
-
-  // End of block (256)
-  const [endCode, endLen] = getFixedLitCode(256);
-  writeBits(endCode, endLen);
-
-  // Flush remaining bits
-  while (bitCount > 0) {
-    out.push(bits & 0xff);
-    bits >>= 8;
-    bitCount -= 8;
-  }
-
-  // Adler-32 checksum
-  let s1 = 1, s2 = 0;
-  for (let i = 0; i < data.length; i++) {
-    s1 = (s1 + data[i]) % 65521;
-    s2 = (s2 + s1) % 65521;
-  }
-  out.push((s2 >> 8) & 0xff);
-  out.push(s2 & 0xff);
-  out.push((s1 >> 8) & 0xff);
-  out.push(s1 & 0xff);
-
-  return new Uint8Array(out);
 }
