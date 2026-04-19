@@ -4,7 +4,7 @@ const app = new Hono<{
   Bindings: { DB: D1Database };
 }>();
 
-const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self';";
+const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://api.qrserver.com; connect-src 'self';";
 
 function htmlResponse(html: string): Response {
   return new Response(html, {
@@ -419,7 +419,6 @@ function baseHtml(title: string, body: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
 <style>${CSS_VARS}</style>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 </head>
 <body>
 ${body}
@@ -469,7 +468,7 @@ export const HTML_INDEX = baseHtml("网络剪切板 - 创建", `
 
   <div class="result" id="result">
     <div class="url" id="clipUrl"></div>
-    <div class="qr-wrap"><canvas id="qrCanvas"></canvas></div>
+    <div class="qr-wrap"><img src="" id="qrImg" style="display:none"></div>
     <div class="actions">
       <button onclick="copyUrl()">copy link</button>
       <button onclick="goToView()">open</button>
@@ -516,9 +515,10 @@ async function createClip() {
     currentUrl = location.origin + data.url;
     document.getElementById('clipUrl').textContent = currentUrl;
 
-    // Generate QR code
-    const canvas = document.getElementById('qrCanvas');
-    QRCode.toCanvas(canvas, currentUrl, { width: 160, margin: 1, color: { dark: '#000', light: '#fff' } });
+    // Generate QR code via API image
+    const qrImg = document.getElementById('qrImg');
+    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(currentUrl);
+    qrImg.style.display = 'block';
 
     document.getElementById('result').classList.add('show');
     showToast('Clip created');
