@@ -1,0 +1,9 @@
+name = "web-clipboard"
+compatibility_date = "2024-12-05"
+main = "src/worker.ts"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "web-clipboard-db"
+database_id = "ed66c244-7164-4a65-be12-890522ffdf70"
+migrations_dir = "migrations"
