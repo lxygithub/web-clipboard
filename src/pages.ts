@@ -382,9 +382,14 @@ async function loadHistory() {
   const userId = getUserId();
   if (!userId) { document.getElementById('historyList').innerHTML = '<div class="empty-state">No user ID found</div>'; return; }
   try {
+    const userId = getUserId();
+    console.log('history userId:', userId);
     const res = await fetch('/api/history?page=' + currentPage + '&limit=20', { headers: { 'x-user-id': userId } });
+    console.log('history status:', res.status);
     const data = await res.json();
+    console.log('history data:', JSON.stringify(data));
     let items = (data.items || []).filter(i => currentTab === 'active' ? !i.expired : i.expired);
+    console.log('filtered items:', items.length, 'tab:', currentTab);
     const list = document.getElementById('historyList');
     if (items.length === 0) { list.innerHTML = '<div class="empty-state">No clips found</div>'; document.getElementById('pagination').innerHTML = ''; return; }
     list.innerHTML = items.map(item => '<li class="history-item" data-id="' + item.id + '"><span class="preview"><a class="preview-link" href="/view/' + item.id + '"><span class="preview-text">' + escapeHtml(item.text) + '</span></a><span class="badge ' + (item.expired ? 'expired' : 'active') + '">' + (item.expired ? 'expired' : 'active') + '</span><button class="qr-toggle" onclick="toggleQR(\'' + item.id + '\', this)">qr</button></span><div class="qr-expand" id="qr-' + item.id + '"></div><div class="meta-info">' + formatTime(item.created_at) + '</div></li>').join('');
@@ -392,7 +397,7 @@ async function loadHistory() {
     if (currentPage > 1) pag.innerHTML += '<button onclick="goPage(' + (currentPage - 1) + ')">prev</button>';
     pag.innerHTML += '<span style="color:var(--text-dim);padding:8px">page ' + currentPage + '</span>';
     if (data.hasMore) pag.innerHTML += '<button onclick="goPage(' + (currentPage + 1) + ')">next</button>';
-  } catch (e) { document.getElementById('historyList').innerHTML = '<div class="empty-state">Failed to load</div>'; }
+  } catch (e) { document.getElementById('historyList').innerHTML = '<div class="empty-state">Failed to load: ' + e.message + '</div>'; console.error(e); }
 }
 function switchTab(tab) { currentTab = tab; currentPage = 1; document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab)); loadHistory(); }
 function goPage(p) { currentPage = p; loadHistory(); }
