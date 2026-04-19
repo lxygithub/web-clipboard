@@ -4,9 +4,14 @@ const app = new Hono<{
   Bindings: { DB: D1Database };
 }>();
 
+const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self';";
+
 function htmlResponse(html: string): Response {
   return new Response(html, {
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": CSP,
+    },
   });
 }
 
