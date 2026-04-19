@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { generateQR } from "../qr";
 
 const app = new Hono<{
   Bindings: { DB: D1Database };
@@ -11,6 +12,22 @@ app.use("/api/*", cors({
   allowMethods: ["GET", "POST", "OPTIONS"],
   allowHeaders: ["Content-Type"],
 }));
+
+// GET /api/qr/:id - Generate QR code PNG for a clip
+app.get("/api/qr/:id", async (c) => {
+  const id = c.req.param("id");
+  const clip = await c.env.DB.prepare("SELECT id FROM clips WHERE id = ?").bind(id).first();
+  if (!clip) return new Response("Not found", { status: 404 });
+
+  const origin = c.req.url.replace(/\/api\/qr\/.*/, "");
+  const png = generateQR(`${origin}/${id}`, 4);
+  return new Response(png.buffer as ArrayBuffer, {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=86400",
+    },
+  });
+});
 
 // IP rate limiting: in-memory map, 10 requests per minute per IP
 const rateLimit = new Map<string, { count: number; resetAt: number }>();

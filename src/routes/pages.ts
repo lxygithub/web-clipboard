@@ -4,7 +4,7 @@ const app = new Hono<{
   Bindings: { DB: D1Database };
 }>();
 
-const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://api.qrserver.com; font-src 'self' data:; connect-src 'self';";
+const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';";
 
 function htmlResponse(html: string): Response {
   return new Response(html, {
@@ -515,9 +515,9 @@ async function createClip() {
     currentUrl = location.origin + data.url;
     document.getElementById('clipUrl').textContent = currentUrl;
 
-    // Generate QR code via API image
+    // Generate QR code from our own API (no external deps)
     const qrImg = document.getElementById('qrImg');
-    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(currentUrl);
+    qrImg.src = '/api/qr/' + data.id;
     qrImg.style.display = 'block';
 
     document.getElementById('result').classList.add('show');
