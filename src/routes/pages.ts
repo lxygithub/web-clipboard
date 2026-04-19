@@ -4,7 +4,7 @@ const app = new Hono<{
   Bindings: { DB: D1Database };
 }>();
 
-const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://api.qrserver.com; connect-src 'self';";
+const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://api.qrserver.com; font-src 'self' data:; connect-src 'self';";
 
 function htmlResponse(html: string): Response {
   return new Response(html, {
