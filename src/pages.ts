@@ -175,6 +175,11 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .history-item .preview-link:hover { text-decoration: none; }
 .history-item .preview-link:hover .preview-text { color: var(--cyan); }
 .history-item .meta-info { font-size: 0.7rem; color: var(--text-dim); }
+.history-item .qr-toggle { font-size: 0.65rem; padding: 2px 8px; margin-left: 8px; cursor: pointer; color: var(--text-dim); border: 1px solid var(--border); border-radius: var(--radius); background: transparent; font-family: var(--font-mono); transition: all 0.2s; }
+.history-item .qr-toggle:hover { color: var(--cyan); border-color: var(--cyan); }
+.history-item .qr-expand { display: none; padding: 12px 0; }
+.history-item .qr-expand.show { display: block; }
+.history-item .qr-expand img { display: inline-block; padding: 8px; background: #fff; border-radius: var(--radius); }
 .badge { display: inline-block; font-size: 0.65rem; padding: 1px 6px; border-radius: var(--radius); margin-left: 8px; }
 .badge.expired { background: rgba(255,64,87,0.15); color: var(--danger); border: 1px solid rgba(255,64,87,0.3); }
 .badge.active { background: rgba(0,255,136,0.1); color: var(--success); border: 1px solid rgba(0,255,136,0.3); }
@@ -382,7 +387,7 @@ async function loadHistory() {
     let items = (data.items || []).filter(i => currentTab === 'active' ? !i.expired : i.expired);
     const list = document.getElementById('historyList');
     if (items.length === 0) { list.innerHTML = '<div class="empty-state">No clips found</div>'; document.getElementById('pagination').innerHTML = ''; return; }
-    list.innerHTML = items.map(item => '<li class="history-item"><span class="preview"><a class="preview-link" href="/view/' + item.id + '"><span class="preview-text">' + escapeHtml(item.text) + '</span></a><span class="badge ' + (item.expired ? 'expired' : 'active') + '">' + (item.expired ? 'expired' : 'active') + '</span></span><div class="meta-info">' + formatTime(item.created_at) + '</div></li>').join('');
+    list.innerHTML = items.map(item => '<li class="history-item" data-id="' + item.id + '"><span class="preview"><a class="preview-link" href="/view/' + item.id + '"><span class="preview-text">' + escapeHtml(item.text) + '</span></a><span class="badge ' + (item.expired ? 'expired' : 'active') + '">' + (item.expired ? 'expired' : 'active') + '</span><button class="qr-toggle" onclick="toggleQR(\'' + item.id + '\', this)">qr</button></span><div class="qr-expand" id="qr-' + item.id + '"></div><div class="meta-info">' + formatTime(item.created_at) + '</div></li>').join('');
     const pag = document.getElementById('pagination'); pag.innerHTML = '';
     if (currentPage > 1) pag.innerHTML += '<button onclick="goPage(' + (currentPage - 1) + ')">prev</button>';
     pag.innerHTML += '<span style="color:var(--text-dim);padding:8px">page ' + currentPage + '</span>';
@@ -391,6 +396,16 @@ async function loadHistory() {
 }
 function switchTab(tab) { currentTab = tab; currentPage = 1; document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab)); loadHistory(); }
 function goPage(p) { currentPage = p; loadHistory(); }
+function toggleQR(id, btn) {
+  const el = document.getElementById('qr-' + id);
+  if (el.classList.contains('show')) { el.classList.remove('show'); return; }
+  if (el.querySelector('img')) { el.classList.add('show'); return; }
+  const img = document.createElement('img');
+  img.src = '/api/qr/' + id;
+  img.alt = 'QR code';
+  el.appendChild(img);
+  el.classList.add('show');
+}
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 function formatTime(ts) { const d = new Date(ts * 1000); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
 function getUserId() { let uid = localStorage.getItem('clipboard_uid'); if (!uid) { uid = 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('clipboard_uid', uid); } return uid; }
