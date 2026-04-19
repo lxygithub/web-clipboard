@@ -427,11 +427,8 @@ ${body}
 </html>`;
 }
 
-function toast(msg: string): string {
-  return `<script>
-function showToast(m){var t=document.getElementById('toast');if(t){t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}}
-document.addEventListener('DOMContentLoaded',()=>{${msg ? `showToast('${msg}')` : ''}});
-</script>`;
+function toastScript(msg: string): string {
+  return msg ? `showToast('${msg}');` : '';
 }
 
 export const HTML_INDEX = baseHtml("网络剪切板 - 创建", `
@@ -477,6 +474,7 @@ export const HTML_INDEX = baseHtml("网络剪切板 - 创建", `
 </div>
 
 <script>
+function showToast(m){var t=document.getElementById('toast');if(t){t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}}
 const MAX_SIZE = 102400;
 const textInput = document.getElementById('textInput');
 const charCount = document.getElementById('charCount');
@@ -546,7 +544,7 @@ function getUserId() {
   }
   return uid;
 }
-${toast('')}
+${toastScript('')}
 </script>
 `);
 
@@ -586,6 +584,7 @@ export const HTML_VIEW = baseHtml("网络剪切板 - 查看", `
 </div>
 
 <script>
+function showToast(m){var t=document.getElementById('toast');if(t){t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}}
 const CLIP_ID = '__CLIP_ID__';
 let clipText = '';
 
@@ -658,7 +657,7 @@ function formatTime(ts) {
   const d = new Date(ts * 1000);
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
-${toast('')}
+${toastScript('')}
 </script>
 `);
 
@@ -683,6 +682,7 @@ export const HTML_HISTORY = baseHtml("网络剪切板 - 历史", `
 </div>
 
 <script>
+function showToast(m){var t=document.getElementById('toast');if(t){t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}}
 let currentTab = 'active';
 let currentPage = 1;
 
@@ -775,6 +775,6 @@ function getUserId() {
 }
 
 document.addEventListener('DOMContentLoaded', loadHistory);
-${toast('')}
+${toastScript('')}
 </script>
 `);
