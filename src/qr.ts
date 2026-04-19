@@ -199,11 +199,9 @@ export function generateQR(text: string, scale: number = 4): Uint8Array {
   const alignPos: number[] = [6];
   if (version >= 2) {
     const numAlign = Math.floor(version / 7) + 2;
-    const last = size - 7;
-    const step = Math.ceil((last - 6) / (numAlign - 1));
-    const adjustedStep = step % 2 === 0 ? step : step + 1;
-    for (let p = last; alignPos.length < numAlign; p -= adjustedStep) {
-      alignPos.splice(1, 0, Math.max(6, p));
+    const step = Math.floor((version * 8 + numAlign * 3 + 5) / (numAlign * 4 - 4)) * 2;
+    for (let pos = size - 7; alignPos.length < numAlign; pos -= step) {
+      alignPos.splice(1, 0, pos);
     }
   }
 
