@@ -74,11 +74,19 @@ app.post("/api/create", async (c) => {
   }
   if (retries >= 3) return c.json({ error: "Failed to generate unique ID" }, 500);
 
+  // Increment total clips counter
+  await c.env.DB.prepare("UPDATE stats SET value = value + 1 WHERE key = 'total_clips'").run();
+
   await c.env.DB.prepare(
     "INSERT INTO clips (id, text, password, user_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(id!, body.text, body.password || null, userId, now, now + body.expiresIn).run();
 
   return c.json({ id: id!, url: `/${id!}` });
+});
+
+app.get("/api/stats", async (c) => {
+  const row = await c.env.DB.prepare("SELECT value FROM stats WHERE key = 'total_clips'").first() as { value: number } | null;
+  return c.json({ total: row?.value ?? 0 });
 });
 
 app.get("/api/get/:id", async (c) => {

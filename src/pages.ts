@@ -200,7 +200,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .toast.show { opacity: 1; }
 @media (max-width: 600px) {
   .container { padding: 24px 12px; }
-  h1 { font-size: 1.2rem; }
+  .stats-bar { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 4px; }
+.stats-bar span { color: var(--cyan); }
+h1 { font-size: 1.2rem; }
   textarea { min-height: 150px; }
   .options { flex-direction: column; align-items: flex-start; }
 }
@@ -228,6 +230,7 @@ export const HTML_INDEX = baseHtml("网络剪切板 - 创建", `
     <div class="logo"><span class="accent">></span>clip<span class="cursor"></span></div>
     <nav><a href="/history">history</a></nav>
   </div>
+  <div class="stats-bar">clips created: <span id="totalClips">...</span></div>
   <h1><span class="accent">$</span> new clip</h1>
   <textarea id="textInput" placeholder="Paste or type text here..." maxlength="102400"></textarea>
   <div class="char-count" id="charCount">0 / 100KB</div>
@@ -301,6 +304,14 @@ function getUserId() {
   if (!uid) { uid = 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('clipboard_uid', uid); }
   return uid;
 }
+async function loadStats() {
+  try {
+    const res = await fetch('/api/stats');
+    const data = await res.json();
+    document.getElementById('totalClips').textContent = data.total;
+  } catch (e) {}
+}
+document.addEventListener('DOMContentLoaded', loadStats);
 </script>
 `);
 
