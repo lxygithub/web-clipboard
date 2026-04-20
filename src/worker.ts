@@ -11,7 +11,7 @@ const app = new Hono<{
 app.use("/api/*", cors({
   origin: (origin) => origin,
   allowMethods: ["GET", "POST", "OPTIONS"],
-  allowHeaders: ["Content-Type"],
+  allowHeaders: ["Content-Type", "x-user-id"],
 }));
 
 // ─── Rate Limiting ────────────────────────────────────
