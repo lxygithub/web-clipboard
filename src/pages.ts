@@ -390,10 +390,8 @@ export const HTML_HISTORY = baseHtml("网络剪切板 - 历史", `
 function showToast(m){var t=document.getElementById('toast');if(t){t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}}
 let currentTab = 'active', currentPage = 1;
 async function loadHistory() {
-  const userId = getUserId();
-  if (!userId) { document.getElementById('historyList').innerHTML = '<div class="empty-state">No user ID found</div>'; return; }
   try {
-    const res = await fetch('/api/history?page=' + currentPage + '&limit=20', { headers: { 'x-user-id': userId } });
+    const res = await fetch('/api/history?page=' + currentPage + '&limit=20');
     const data = await res.json();
     let items = (data.items || []).filter(i => currentTab === 'active' ? !i.expired : i.expired);
     const list = document.getElementById('historyList');

@@ -119,17 +119,15 @@ app.get("/api/verify-password/:id", async (c) => {
 });
 
 app.get("/api/history", async (c) => {
-  const userId = c.req.header("x-user-id");
-  if (!userId) return c.json({ error: "User ID required" }, 400);
   const page = parseInt(c.req.query("page") || "1");
   const limit = Math.min(parseInt(c.req.query("limit") || "20"), 50);
   const offset = (page - 1) * limit;
   const now = Math.floor(Date.now() / 1000);
 
   const { results } = await c.env.DB.prepare(
-    "SELECT id, text, created_at, expires_at FROM clips WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
-  ).bind(userId, limit, offset).all();
-  const total = await c.env.DB.prepare("SELECT COUNT(*) as count FROM clips WHERE user_id = ?").bind(userId).first() as { count: number };
+    "SELECT id, text, created_at, expires_at FROM clips ORDER BY created_at DESC LIMIT ? OFFSET ?"
+  ).bind(limit, offset).all();
+  const total = await c.env.DB.prepare("SELECT COUNT(*) as count FROM clips").first() as { count: number };
 
   return c.json({
     items: (results || []).map((r: any) => ({
