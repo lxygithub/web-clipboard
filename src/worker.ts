@@ -125,15 +125,17 @@ app.get("/api/history", async (c) => {
   const now = Math.floor(Date.now() / 1000);
 
   const { results } = await c.env.DB.prepare(
-    "SELECT id, text, created_at, expires_at FROM clips ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    "SELECT id, text, password, created_at, expires_at FROM clips ORDER BY created_at DESC LIMIT ? OFFSET ?"
   ).bind(limit, offset).all();
   const total = await c.env.DB.prepare("SELECT COUNT(*) as count FROM clips").first() as { count: number };
 
   return c.json({
-    items: (results || []).map((r: any) => ({
-      id: r.id, text: r.text.length > 100 ? r.text.substring(0, 100) + "..." : r.text,
-      created_at: r.created_at, expires_at: r.expires_at, expired: r.expires_at < now,
-    })),
+    items: (results || []).map((r: any) => {
+      const text = r.password ? "**********" : (r.text.length > 100 ? r.text.substring(0, 100) + "..." : r.text);
+      return {
+        id: r.id, text, created_at: r.created_at, expires_at: r.expires_at, expired: r.expires_at < now, hasPassword: !!r.password,
+      };
+    }),
     page, limit, total: total.count, hasMore: page * limit < total.count,
   });
 });

@@ -170,6 +170,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .history-list { list-style: none; }
 .history-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
 .history-item:last-child { border-bottom: none; }
+.history-item .history-url { font-size: 0.8rem; margin-bottom: 4px; }
+.history-item .history-url a { color: var(--cyan); font-weight: 600; }
+.history-item .history-preview { font-size: 0.85rem; color: var(--text); margin-bottom: 4px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .history-item .preview { font-size: 0.85rem; color: var(--text); margin-bottom: 4px; display: block; }
 .history-item .preview-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .history-item .preview-link:hover { text-decoration: none; }
@@ -396,7 +399,11 @@ async function loadHistory() {
     let items = (data.items || []).filter(i => currentTab === 'active' ? !i.expired : i.expired);
     const list = document.getElementById('historyList');
     if (items.length === 0) { list.innerHTML = '<div class="empty-state">No clips found</div>'; document.getElementById('pagination').innerHTML = ''; return; }
-    list.innerHTML = items.map(item => '<li class="history-item" data-id="' + item.id + '"><span class="preview"><a class="preview-link" href="/view/' + item.id + '"><span class="preview-text">' + escapeHtml(item.text) + '</span></a><span class="badge ' + (item.expired ? 'expired' : 'active') + '">' + (item.expired ? 'expired' : 'active') + '</span><button class="qr-toggle" data-id="' + item.id + '">qr</button></span><div class="qr-expand" id="qr-' + item.id + '"></div><div class="meta-info">' + formatTime(item.created_at) + '</div></li>').join('');
+    list.innerHTML = items.map(item => {
+      var url = location.origin + '/view/' + item.id;
+      var content = item.hasPassword ? '<span class="content" style="color:var(--text-dim);font-style:italic">**********</span>' : '<span class="content">' + escapeHtml(item.text) + '</span>';
+      return '<li class="history-item" data-id="' + item.id + '"><div class="history-url"><a href="' + url + '">/' + item.id + '</a></div><div class="history-preview">' + content + '<span class="badge ' + (item.expired ? 'expired' : 'active') + '">' + (item.expired ? 'expired' : 'active') + '</span><button class="qr-toggle" data-id="' + item.id + '">qr</button></div><div class="qr-expand" id="qr-' + item.id + '"></div><div class="meta-info">' + formatTime(item.created_at) + '</div></li>';
+    }).join('');
     list.querySelectorAll('.qr-toggle').forEach(btn => btn.addEventListener('click', function() { toggleQR(this.getAttribute('data-id'), this); }));
     const pag = document.getElementById('pagination'); pag.innerHTML = '';
     if (currentPage > 1) pag.innerHTML += '<button onclick="goPage(' + (currentPage - 1) + ')">prev</button>';
